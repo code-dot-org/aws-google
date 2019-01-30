@@ -1,4 +1,4 @@
-# Aws::Google
+# Aws::Google [![Build Status](https://travis-ci.com/code-dot-org/aws-google.svg?branch=master)](https://travis-ci.com/code-dot-org/aws-google)
 
 Use Google OAuth as an AWS Credential Provider.
 
