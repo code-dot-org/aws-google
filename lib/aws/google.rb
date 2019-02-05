@@ -134,6 +134,8 @@ Google ID: #{token_params['sub']}", e.backtrace
 
     # Write credentials and expiration to AWS credentials file.
     def write_credentials
+      # AWS CLI is needed because writing AWS credentials is not supported by the AWS Ruby SDK.
+      return unless system('which aws >/dev/null 2>&1')
       %w[
         access_key_id
         secret_access_key
