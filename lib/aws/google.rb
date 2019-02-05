@@ -20,7 +20,7 @@ module Aws
   #
   #   ec2 = Aws::EC2::Client.new(credentials: role_credentials)
   #
-  # If you omit `:client` option, a new {STS::Client} object will be
+  # If you omit `:client` option, a new {Aws::STS::Client} object will be
   # constructed.
   class Google
     include ::Aws::CredentialProvider
@@ -101,7 +101,8 @@ module Aws
         rescue JWT::DecodeError, JWT::ExpiredSignature
           # Refresh and retry once if token is expired or invalid.
           client.refresh!
-          (tries -= 1).zero? ? raise : retry
+          raise if (tries -= 1).zero?
+          retry
         end
 
         @client.assume_role_with_web_identity(
@@ -111,7 +112,8 @@ module Aws
           )
         )
       rescue Signet::AuthorizationError => e
-        (@google_client = google_oauth) && retry || raise
+        retry if (@google_client = google_oauth)
+        raise
       rescue Aws::STS::Errors::AccessDenied => e
         retry if (@google_client = google_oauth)
         raise e, "\nYour Google ID does not have access to the requested AWS Role. Ask your administrator to provide access.
@@ -119,6 +121,7 @@ Role: #{@assume_role_params[:role_arn]}
 Email: #{token_params['email']}
 Google ID: #{token_params['sub']}", e.backtrace
       end
+
       c = assume_role.credentials
       @credentials = Aws::Credentials.new(
         c.access_key_id,
@@ -129,8 +132,7 @@ Google ID: #{token_params['sub']}", e.backtrace
       write_credentials
     end
 
-    # Use `aws configure set` to write credentials and expiration to AWS credentials file.
-    # AWS CLI is needed because writing AWS credentials is not supported by the AWS Ruby SDK.
+    # Write credentials and expiration to AWS credentials file.
     def write_credentials
       %w[
         access_key_id
@@ -150,8 +152,6 @@ Google ID: #{token_params['sub']}", e.backtrace
       profile = opts.delete(:profile) || @profile_name
       if @parsed_config && (prof_config = @parsed_config[profile])
         prof_config[key]
-      else
-        nil
       end
     end
   end
