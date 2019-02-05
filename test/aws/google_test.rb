@@ -68,13 +68,15 @@ describe Aws::Google do
         :assume_role_with_web_identity,
         credentials: credentials
       )
-      @system = Object.any_instance.stubs(:system).with { |x| x.match /aws configure set / }
+      @system = Object.any_instance.stubs(:system).with do |x|
+        x.match('which aws') || x.match('aws configure set ')
+      end.returns(true)
       @oauth_default = Google::Auth.stubs(:get_application_default).returns(oauth)
     end
 
     it 'creates credentials from a Google auth token' do
       @oauth_default.once
-      system.times(4)
+      system.times(5)
 
       c = Aws::STS::Client.new.config.credentials
       c.credentials.access_key_id.must_equal credentials[:access_key_id]
@@ -90,7 +92,7 @@ describe Aws::Google do
         then.returns(JWT.encode({ email: 'email' }, ''))
       Google::Auth.stubs(:get_application_default).returns(m)
 
-      system.times(4)
+      system.times(5)
 
       c = Aws::STS::Client.new.config.credentials
       c.credentials.access_key_id.must_equal credentials[:access_key_id]
@@ -117,7 +119,7 @@ describe Aws::Google do
     it 'refreshes saved expired credentials' do
       config[:profile] = 'cdo-expired'
       @oauth_default.once
-      system.times(4)
+      system.times(5)
       Aws::STS::Client.new.config.credentials
     end
 
@@ -139,7 +141,7 @@ describe Aws::Google do
       end
 
       it 'retries Google auth when invalid credentials are provided' do
-        system.times(4)
+        system.times(5)
         @oauth_default.once
         Aws::Google.any_instance.expects(:google_oauth).returns(oauth)
         Aws::STS::Client.new.config.credentials
