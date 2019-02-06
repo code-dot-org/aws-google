@@ -5,7 +5,6 @@ require_relative 'google/credential_provider'
 require 'googleauth'
 require 'google/api_client/auth/storage'
 require 'google/api_client/auth/storages/file_store'
-require 'google/api_client/auth/installed_app'
 
 module Aws
   # An auto-refreshing credential provider that works by assuming
@@ -36,6 +35,9 @@ module Aws
     # @option options [String] :external_id
     # @option options [STS::Client] :client STS::Client to use (default: create new client)
     # @option options [String] :profile AWS Profile to store temporary credentials (default `default`)
+    # @option options [String] :domain G Suite domain for account-selection hint
+    # @option options [String] :online if `true` only a temporary access token will be provided,
+    #                 a long-lived refresh token will not be created and stored on the filesystem.
     # @option options [::Google::Auth::ClientId] :google_id
     def initialize(options = {})
       @oauth_attempted = false
@@ -50,6 +52,8 @@ module Aws
         options[:google_client_secret]
       )
       @client = options[:client] || Aws::STS::Client.new(credentials: nil)
+      @domain = options[:domain]
+      @online = options[:online]
 
       # Use existing AWS credentials stored in the shared config if available.
       # If this is `nil` or expired, #refresh will be called on the first AWS API service call
@@ -74,18 +78,38 @@ module Aws
     # Create an OAuth2 Client using Google's default browser-based OAuth InstalledAppFlow.
     # Store cached credentials to the standard Google Application Default Credentials location.
     # Ref: http://goo.gl/IUuyuX
+    # @return [Signet::OAuth2::Client]
     def google_oauth
       return nil if @oauth_attempted
       @oauth_attempted = true
-      require 'google/api_client/auth/installed_app'
-      flow = ::Google::APIClient::InstalledAppFlow.new(
-        client_id: @google_id.id,
-        client_secret: @google_id.secret,
-        scope: %w[email profile]
-      )
+
       path = "#{ENV['HOME']}/.config/#{::Google::Auth::CredentialsLoader::WELL_KNOWN_PATH}"
       FileUtils.mkdir_p(File.dirname(path))
-      flow.authorize(GoogleStorage.new(::Google::APIClient::FileStore.new(path)))
+      storage = GoogleStorage.new(::Google::APIClient::FileStore.new(path))
+
+      options = {
+        client_id: @google_id.id,
+        client_secret: @google_id.secret,
+        scope: %w[openid email]
+      }
+      uri_options = {include_granted_scopes: true}
+      uri_options[:hd] = @domain if @domain
+      uri_options[:access_type] = 'online' if @online
+
+      require 'google/api_client/auth/installed_app'
+      if defined?(Launchy) && Launchy::Application::Browser.new.app_list.any?
+        ::Google::APIClient::InstalledAppFlow.new(options).authorize(storage, uri_options)
+      else
+        credentials = ::Google::Auth::UserRefreshCredentials.new(
+          options.merge(redirect_uri: 'urn:ietf:wg:oauth:2.0:oob')
+        )
+        url = credentials.authorization_uri(uri_options)
+        print 'Open the following URL in the browser and enter the ' \
+             "resulting code after authorization:\n#{url}\n> "
+        credentials.code = gets
+        credentials.fetch_access_token!
+        credentials.tap(&storage.method(:write_credentials))
+      end
     end
 
     def refresh
