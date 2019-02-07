@@ -8,20 +8,12 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Will Jordan']
   spec.email         = ['will@code.org']
 
-  spec.summary       = 'Use Google OAuth as an AWS credential provider.'
+  spec.summary       = 'Use Google OAuth as an AWS credential provider'
   spec.description   = 'Use Google OAuth as an AWS credential provider.'
   spec.homepage      = 'https://github.com/code-dot-org/aws-google'
   spec.license       = 'Apache-2.0'
 
-  # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
-  # to allow pushing to a single host or delete this section to allow pushing to any host.
-  if spec.respond_to?(:metadata)
-    spec.metadata['allowed_push_host'] = "TODO: Set to 'http://mygemserver.com'"
-  else
-    raise 'RubyGems 2.0 or newer is required to protect against ' \
-      'public gem pushes.'
-  end
-
+  spec.metadata['allowed_push_host'] = 'https://rubygems.org'
   spec.files = `git ls-files -z`.split("\x0").reject do |f|
     f.match(%r{^(test|spec|features)/})
   end
