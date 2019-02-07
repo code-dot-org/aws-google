@@ -52,6 +52,8 @@ by your Google Client ID and a specific set of Google Account IDs:
 
 - In your Ruby code, construct an `Aws::Google` object by passing in the AWS role, client id and client secret:
 ```ruby
+require 'aws/google'
+
 aws_role = 'arn:aws:iam::[AccountID]:role/[Role]'
 client_id = '123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com'
 client_secret = '01234567890abcdefghijklmn'
