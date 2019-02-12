@@ -38,6 +38,8 @@ module Aws
     # @option options [String] :domain G Suite domain for account-selection hint
     # @option options [String] :online if `true` only a temporary access token will be provided,
     #                 a long-lived refresh token will not be created and stored on the filesystem.
+    # @option options [String] :port port for local server to listen on to capture oauth browser redirect.
+    #                 Defaults to an out-of-band authentication process.
     # @option options [::Google::Auth::ClientId] :google_id
     def initialize(options = {})
       @oauth_attempted = false
@@ -54,6 +56,7 @@ module Aws
       @client = options[:client] || Aws::STS::Client.new(credentials: nil)
       @domain = options[:domain]
       @online = options[:online]
+      @port = options[:port]
 
       # Use existing AWS credentials stored in the shared config if available.
       # If this is `nil` or expired, #refresh will be called on the first AWS API service call
@@ -96,20 +99,50 @@ module Aws
       uri_options[:hd] = @domain if @domain
       uri_options[:access_type] = 'online' if @online
 
-      require 'google/api_client/auth/installed_app'
-      if defined?(Launchy) && Launchy::Application::Browser.new.app_list.any?
-        ::Google::APIClient::InstalledAppFlow.new(options).authorize(storage, uri_options)
-      else
-        credentials = ::Google::Auth::UserRefreshCredentials.new(
-          options.merge(redirect_uri: 'urn:ietf:wg:oauth:2.0:oob')
-        )
-        url = credentials.authorization_uri(uri_options)
-        print 'Open the following URL in the browser and enter the ' \
-             "resulting code after authorization:\n#{url}\n> "
-        credentials.code = gets
-        credentials.fetch_access_token!
-        credentials.tap(&storage.method(:write_credentials))
+      credentials = ::Google::Auth::UserRefreshCredentials.new(options)
+      credentials.code = get_oauth_code(credentials, uri_options)
+      credentials.fetch_access_token!
+      credentials.tap(&storage.method(:write_credentials))
+    end
+
+    def get_oauth_code(client, options)
+      raise 'fallback' unless @port
+      require 'launchy'
+      require 'webrick'
+      code = nil
+      server = WEBrick::HTTPServer.new(
+        Port: @port,
+        Logger: WEBrick::Log.new(STDOUT, 0),
+        AccessLog: []
+      )
+      server.mount_proc '/' do |req, res|
+        code = req.query['code']
+        res.status = 202
+        res.body = 'Login successful, you may close this browser window.'
+        server.stop
       end
+      trap('INT') { server.shutdown }
+      client.redirect_uri = "http://localhost:#{@port}"
+      launchy = Launchy.open(client.authorization_uri(options).to_s)
+      server_thread = Thread.new do
+        begin
+          server.start
+        ensure server.shutdown
+        end
+      end
+      while server_thread.alive?
+        raise 'fallback' if !launchy.alive? && !launchy.value.success?
+        sleep 0.1
+      end
+      code || raise('fallback')
+    rescue StandardError
+      trap('INT', 'DEFAULT')
+      # Fallback to out-of-band authentication if browser launch failed.
+      client.redirect_uri = 'oob'
+      url = client.authorization_uri(options)
+      print "\nOpen the following URL in a browser and enter the " \
+             "resulting code after authorization:\n#{url}\n> "
+      gets
     end
 
     def refresh
