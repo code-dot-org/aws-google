@@ -168,7 +168,7 @@ module Aws
             role_session_name: token_params['email']
           )
         )
-      rescue Signet::AuthorizationError => e
+      rescue Signet::AuthorizationError, Aws::STS::Errors::ExpiredTokenException
         retry if (@google_client = google_oauth)
         raise
       rescue Aws::STS::Errors::AccessDenied => e

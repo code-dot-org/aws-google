@@ -179,5 +179,24 @@ describe Aws::Google do
         assert_requested(token_post)
       end
     end
+
+    describe 'expired Google auth token' do
+      before do
+        config[:client].stub_responses(
+          :assume_role_with_web_identity,
+          [
+            Aws::STS::Errors::ExpiredTokenException.new(nil, nil),
+            { credentials: credentials }
+          ]
+        )
+      end
+
+      it 'refreshes Google auth token when expired' do
+        system.times(5)
+        @oauth_default.once
+        Aws::Google.any_instance.expects(:google_oauth).returns(oauth).once
+        Aws::STS::Client.new.config.credentials
+      end
+    end
   end
 end
