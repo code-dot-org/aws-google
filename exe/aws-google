@@ -1,0 +1,73 @@
+#!/usr/bin/env ruby
+
+# CLI to retrieve AWS credentials in credential_process format.
+# Ref: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
+
+require 'aws/google'
+require 'time'
+require 'json'
+require 'optparse'
+
+def error(msg)
+  puts msg
+  exit 1
+end
+
+options = {}
+OptionParser.new do |opts|
+  opts.on('-p PROFILE', '--profile PROFILE', 'Profile') do |p|
+    options[:profile] = p
+  end
+  opts.on('-v', '--version', 'Version') do
+    require 'aws/google/version'
+    puts Aws::Google::VERSION
+    exit 0
+  end
+  opts.on('-r ROLE', '--role ROLE', 'AWS Role arn') do |r|
+    options[:role_arn] = r
+  end
+  opts.on('-i ID', '--client-id ID', 'Google Client ID') do |id|
+    options[:google_client_id] = id
+  end
+  opts.on('-s SECRET', '--client-secret SECRET', 'Google Client Secret') do |secret|
+    options[:google_client_secret] = secret
+  end
+  opts.on('-h DOMAIN', '--domain DOMAIN', 'Google Domain') do |hd|
+    options[:domain] = hd
+  end
+  opts.on('-d DURATION', '--duration DURATION', 'Duration in seconds') do |d|
+    options[:duration_seconds] = d.to_i
+  end
+  opts.on('--port PORT', 'Port number for local server') do |p|
+    options[:port] = p.to_i
+  end
+  opts.on('--online', 'Online authentication, no refresh token') do |o|
+    options[:online] = true
+  end
+end.parse!
+
+config = Aws.shared_config
+profile = options[:profile] || ENV['AWS_PROFILE'] || 'default'
+
+options[:role_arn] ||= config.get('aws_role', profile: profile) ||
+                   error('Missing config: aws_role')
+options[:google_client_id] ||= config.get('google_client_id', profile: profile) ||
+                        error('Missing config: google_client_id')
+options[:google_client_secret] ||= config.get('google_client_secret', profile: profile) ||
+                            error('Missing config: google_client_secret')
+
+# Cache temporary-session credentials in a separately-named profile.
+# Stored credentials take priority over credential_process,
+# so they would never be refreshed if stored in the same profile.
+options[:profile] += '_session'
+google = Aws::Google.new(options)
+credentials = google.credentials
+output = {
+  Version: 1,
+  AccessKeyId: credentials.access_key_id,
+  SecretAccessKey: credentials.secret_access_key,
+  SessionToken: credentials.session_token,
+  Expiration: Time.at(google.expiration.to_i).iso8601
+}
+require 'json'
+puts output.to_json
