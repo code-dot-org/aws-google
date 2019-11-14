@@ -21,8 +21,8 @@ Or install it yourself as:
 ## Usage
 
 - Visit the [Google API Console](https://console.developers.google.com/) to create/obtain OAuth 2.0 Client ID credentials (client ID and client secret) for an application in your Google account.
-- Create an AWS IAM Role with the desired IAM policies attached, and a 'trust relationship' (`AssumeRolePolicyDocument`) allowing the `sts:AssumeRoleWithWebIdentity` action to be permitted
-by your Google Client ID and a specific set of Google Account IDs:
+- Create an AWS IAM Role with the desired IAM policies attached, and a ['trust policy'](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#term_trust-policy) ([`AssumeRolePolicyDocument`](https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html)) allowing the [`sts:AssumeRoleWithWebIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html) action with [Web Identity Federation condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html#condition-keys-wif) authorizing
+your Google Client ID (`accounts.google.com:aud`) and a specific set of Google Account IDs (`accounts.google.com:sub`):
 
 ```json
 {
@@ -36,9 +36,7 @@ by your Google Client ID and a specific set of Google Account IDs:
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "accounts.google.com:aud": "123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com"
-        },
-        "ForAnyValue:StringEquals": {
+          "accounts.google.com:aud": "123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com",
           "accounts.google.com:sub": [
             "000000000000000000000",
             "111111111111111111111"
