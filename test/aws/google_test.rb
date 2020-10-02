@@ -17,6 +17,7 @@ describe Aws::Google do
     )
     # Disable instance metadata credentials.
     stub_request(:get, '169.254.169.254/latest/meta-data/iam/security-credentials/')
+    stub_request(:put, '169.254.169.254/latest/api/token')
     # Disable environment credentials.
     ENV.stubs(:[]).returns(nil)
   end
@@ -79,9 +80,9 @@ describe Aws::Google do
       system.times(5)
 
       c = Aws::STS::Client.new.config.credentials
-      c.credentials.access_key_id.must_equal credentials[:access_key_id]
-      c.credentials.secret_access_key.must_equal credentials[:secret_access_key]
-      c.credentials.session_token.must_equal credentials[:session_token]
+      _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
+      _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
+      _(c.credentials.session_token).must_equal credentials[:session_token]
     end
 
     it 'refreshes expired Google auth token credentials' do
@@ -95,9 +96,9 @@ describe Aws::Google do
       system.times(5)
 
       c = Aws::STS::Client.new.config.credentials
-      c.credentials.access_key_id.must_equal credentials[:access_key_id]
-      c.credentials.secret_access_key.must_equal credentials[:secret_access_key]
-      c.credentials.session_token.must_equal credentials[:session_token]
+      _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
+      _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
+      _(c.credentials.session_token).must_equal credentials[:session_token]
     end
 
     it 'refreshes expired credentials' do
@@ -110,9 +111,9 @@ describe Aws::Google do
       )
       service = Aws::STS::Client.new
       expiration = service.config.credentials.expiration
-      expiration.must_equal(service.config.credentials.expiration)
+      _(expiration).must_equal(service.config.credentials.expiration)
       Timecop.travel(1.5.hours.from_now) do
-        expiration.wont_equal(service.config.credentials.expiration)
+        _(expiration).wont_equal(service.config.credentials.expiration)
       end
     end
 
@@ -153,7 +154,7 @@ describe Aws::Google do
         err = assert_raises(Aws::STS::Errors::AccessDenied) do
           Aws::STS::Client.new.config.credentials
         end
-        err.message.must_match /Your Google ID does not have access to the requested AWS Role./
+        _(err.message).must_match 'Your Google ID does not have access to the requested AWS Role.'
       end
     end
 
