@@ -77,6 +77,17 @@ Aws::Google.config = {
 puts Aws::STS::Client.new.get_caller_identity
 ```
 
+- Or, set `credential_process` in your AWS config profile ([`~/.aws/config`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where)) to `aws-google` to [Source Credentials with an External Process](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html) without any change to your application code:
+
+```
+[profile my_google]
+credential_process = aws-google --profile my_google
+aws_role = arn:aws:iam::[AccountID]:role/[Role]
+google_client_id = 123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com
+google_client_secret = 01234567890abcdefghijklmn
+
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.

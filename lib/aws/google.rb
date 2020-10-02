@@ -39,7 +39,7 @@ module Aws
     # @option options [String] :online if `true` only a temporary access token will be provided,
     #                 a long-lived refresh token will not be created and stored on the filesystem.
     # @option options [String] :port port for local server to listen on to capture oauth browser redirect.
-    #                 Defaults to an out-of-band authentication process.
+    #                 Defaults to 1234. Set to nil or 0 to use an out-of-band authentication process.
     # @option options [::Google::Auth::ClientId] :google_id
     def initialize(options = {})
       @oauth_attempted = false
@@ -56,7 +56,7 @@ module Aws
       @client = options[:client] || Aws::STS::Client.new(credentials: nil)
       @domain = options[:domain]
       @online = options[:online]
-      @port = options[:port]
+      @port = options[:port] || 1234
 
       # Use existing AWS credentials stored in the shared config if available.
       # If this is `nil` or expired, #refresh will be called on the first AWS API service call
@@ -105,8 +105,18 @@ module Aws
       credentials.tap(&storage.method(:write_credentials))
     end
 
+    def silence_output
+      outs = [$stdout, $stderr]
+      clones = outs.map(&:clone)
+      outs.each { |io| io.reopen '/dev/null'}
+      yield
+    ensure
+      outs.each_with_index { |io, i| io.reopen(clones[i]) }
+    end
+
     def get_oauth_code(client, options)
-      raise 'fallback' unless @port
+      raise 'fallback' unless @port && !@port.zero?
+
       require 'launchy'
       require 'webrick'
       code = nil
@@ -123,26 +133,29 @@ module Aws
       end
       trap('INT') { server.shutdown }
       client.redirect_uri = "http://localhost:#{@port}"
-      launchy = Launchy.open(client.authorization_uri(options).to_s)
-      server_thread = Thread.new do
-        begin
-          server.start
-        ensure server.shutdown
+      silence_output do
+        launchy = Launchy.open(client.authorization_uri(options).to_s)
+        server_thread = Thread.new do
+          begin
+            server.start
+          ensure server.shutdown
+          end
         end
-      end
-      while server_thread.alive?
-        raise 'fallback' if !launchy.alive? && !launchy.value.success?
-        sleep 0.1
+        while server_thread.alive?
+          raise 'fallback' if !launchy.alive? && !launchy.value.success?
+
+          sleep 0.1
+        end
       end
       code || raise('fallback')
     rescue StandardError
       trap('INT', 'DEFAULT')
       # Fallback to out-of-band authentication if browser launch failed.
       client.redirect_uri = 'oob'
-      url = client.authorization_uri(options)
-      print "\nOpen the following URL in a browser and enter the " \
-             "resulting code after authorization:\n#{url}\n> "
-      gets
+      return ENV['OAUTH_CODE'] if ENV['OAUTH_CODE']
+
+      raise RuntimeError, 'Open the following URL in a browser to get a code,' \
+             "export to $OAUTH_CODE and rerun:\n#{client.authorization_uri(options)}", []
     end
 
     def refresh
@@ -176,7 +189,7 @@ module Aws
         raise e, "\nYour Google ID does not have access to the requested AWS Role. Ask your administrator to provide access.
 Role: #{@assume_role_params[:role_arn]}
 Email: #{token_params['email']}
-Google ID: #{token_params['sub']}", e.backtrace
+Google ID: #{token_params['sub']}", []
       end
 
       c = assume_role.credentials
