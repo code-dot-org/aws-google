@@ -65,28 +65,18 @@ role_credentials = Aws::Google.new(
 puts Aws::STS::Client.new(credentials: role_credentials).get_caller_identity
 ```
 
-- Or, set `Aws::Google.config` hash to add Google auth to the default credential provider chain:
+- Or, add the properties to your AWS config profile ([`~/.aws/config`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where)) to use Google as the AWS credential provider without any changes to your application code:
 
-```ruby
-Aws::Google.config = {
-  role_arn: aws_role,
-  google_client_id: client_id,
-  google_client_secret: client_secret,
-}
-
-puts Aws::STS::Client.new.get_caller_identity
+```ini
+[my_profile]
+google =
+    role_arn = arn:aws:iam::[AccountID]:role/[Role]
+    client_id = 123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com
+    client_secret = 01234567890abcdefghijklmn
+credential_process = aws-google
 ```
 
-- Or, set `credential_process` in your AWS config profile ([`~/.aws/config`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where)) to `aws-google` to [Source Credentials with an External Process](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html) without any change to your application code:
-
-```
-[profile my_google]
-credential_process = aws-google --profile my_google
-aws_role = arn:aws:iam::[AccountID]:role/[Role]
-google_client_id = 123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com
-google_client_secret = 01234567890abcdefghijklmn
-
-```
+The extra `credential_process` config line tells AWS to [Source Credentials with an External Process](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html), in this case the `aws-google` script, which allows you to seamlessly use the same Google login configuration from non-Ruby SDKs (like the CLI).
 
 ## Development
 

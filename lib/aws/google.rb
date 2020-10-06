@@ -1,6 +1,7 @@
 require_relative 'google/version'
 require 'aws-sdk-core'
 require_relative 'google/credential_provider'
+require_relative 'google/cached_credentials'
 
 require 'googleauth'
 require 'google/api_client/auth/storage'
@@ -23,7 +24,7 @@ module Aws
   # constructed.
   class Google
     include ::Aws::CredentialProvider
-    include ::Aws::RefreshingCredentials
+    include ::Aws::Google::CachedCredentials
 
     class << self
       attr_accessor :config
@@ -34,13 +35,13 @@ module Aws
     # @option options [Integer] :duration_seconds
     # @option options [String] :external_id
     # @option options [STS::Client] :client STS::Client to use (default: create new client)
-    # @option options [String] :profile AWS Profile to store temporary credentials (default `default`)
     # @option options [String] :domain G Suite domain for account-selection hint
     # @option options [String] :online if `true` only a temporary access token will be provided,
     #                 a long-lived refresh token will not be created and stored on the filesystem.
     # @option options [String] :port port for local server to listen on to capture oauth browser redirect.
     #                 Defaults to 1234. Set to nil or 0 to use an out-of-band authentication process.
-    # @option options [::Google::Auth::ClientId] :google_id
+    # @option options [String] :client_id Google client ID
+    # @option options [String] :client_secret Google client secret
     def initialize(options = {})
       @oauth_attempted = false
       @assume_role_params = options.slice(
@@ -48,26 +49,15 @@ module Aws
           input.shape.member_names
       )
 
-      @profile = options[:profile] || ENV['AWS_DEFAULT_PROFILE'] || 'default'
       @google_id = ::Google::Auth::ClientId.new(
-        options[:google_client_id],
-        options[:google_client_secret]
+        options[:client_id],
+        options[:client_secret]
       )
       @client = options[:client] || Aws::STS::Client.new(credentials: nil)
       @domain = options[:domain]
       @online = options[:online]
       @port = options[:port] || 1234
-
-      # Use existing AWS credentials stored in the shared config if available.
-      # If this is `nil` or expired, #refresh will be called on the first AWS API service call
-      # to generate AWS credentials derived from Google authentication.
-      @expiration = Aws.shared_config.get('expiration', profile: @profile) rescue nil
-      @mutex = Mutex.new
-      if near_expiration?
-        refresh!
-      else
-        @credentials = Aws.shared_config.credentials(profile: @profile) rescue nil
-      end
+      super
     end
 
     private
@@ -199,35 +189,8 @@ Google ID: #{token_params['sub']}", []
         c.session_token
       )
       @expiration = c.expiration.to_i
-      write_credentials
-    end
-
-    # Write credentials and expiration to AWS credentials file.
-    def write_credentials
-      # AWS CLI is needed because writing AWS credentials is not supported by the AWS Ruby SDK.
-      return unless system('which aws >/dev/null 2>&1')
-      %w[
-        access_key_id
-        secret_access_key
-        session_token
-      ].map {|x| ["aws_#{x}", @credentials.send(x)]}.
-        to_h.
-        merge(expiration: @expiration).each do |key, value|
-        system("aws configure set #{key} #{value} --profile #{@profile}")
-      end
     end
   end
-
-  # Patch Aws::SharedConfig to allow fetching arbitrary keys from the shared config.
-  module SharedConfigGetKey
-    def get(key, opts = {})
-      profile = opts.delete(:profile) || @profile_name
-      if @parsed_config && (prof_config = @parsed_config[profile])
-        prof_config[key]
-      end
-    end
-  end
-  Aws::SharedConfig.prepend SharedConfigGetKey
 
   # Extend ::Google::APIClient::Storage to write {type: 'authorized_user'} to credentials,
   # as required by Google's default credentials loader.
