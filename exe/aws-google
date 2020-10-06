@@ -7,7 +7,7 @@ require 'aws/google'
 require 'time'
 require 'json'
 
-google = ::Aws::CredentialProviderChain.new.resolve
+google = ::Aws::STS::Client.new.config.credentials
 credentials = google.credentials
 output = {
   Version: 1,
