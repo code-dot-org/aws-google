@@ -37,8 +37,8 @@ describe Aws::Google do
     let :config do
       {
         role_arn: 'aws_role',
-        google_client_id: 'client_id',
-        google_client_secret: 'client_secret',
+        client_id: 'client_id',
+        client_secret: 'client_secret',
         profile: 'cdo',
         client: Aws::STS::Client.new(stub_responses: true)
       }
@@ -79,7 +79,7 @@ describe Aws::Google do
       @oauth_default.once
       system.times(5)
 
-      c = Aws::STS::Client.new.config.credentials
+      c = Aws::Google.new(config).credentials
       _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
       _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
       _(c.credentials.session_token).must_equal credentials[:session_token]
@@ -95,7 +95,7 @@ describe Aws::Google do
 
       system.times(5)
 
-      c = Aws::STS::Client.new.config.credentials
+      c = Aws::Google.new(config).credentials
       _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
       _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
       _(c.credentials.session_token).must_equal credentials[:session_token]
@@ -109,11 +109,11 @@ describe Aws::Google do
           { credentials: credentials.dup.tap { |c| c[:expiration] = 2.hours.from_now } }
         ]
       )
-      service = Aws::STS::Client.new
-      expiration = service.config.credentials.expiration
-      _(expiration).must_equal(service.config.credentials.expiration)
+      provider = Aws::Google.new(config)
+      expiration = provider.expiration
+      _(expiration).must_equal(provider.expiration)
       Timecop.travel(1.5.hours.from_now) do
-        _(expiration).wont_equal(service.config.credentials.expiration)
+        _(expiration).wont_equal(provider.expiration)
       end
     end
 
@@ -121,13 +121,13 @@ describe Aws::Google do
       config[:profile] = 'cdo-expired'
       @oauth_default.once
       system.times(5)
-      Aws::STS::Client.new.config.credentials
+      Aws::Google.new(config).credentials
     end
 
     it 'reuses saved credentials without refreshing' do
       config[:profile] = 'cdo-saved'
       Aws::Google.any_instance.expects(:refresh).never
-      Aws::STS::Client.new.config.credentials
+      Aws::Google.new(config).credentials
     end
 
     describe 'valid Google auth, no AWS permissions' do
@@ -145,14 +145,14 @@ describe Aws::Google do
         system.times(5)
         @oauth_default.once
         Aws::Google.any_instance.expects(:google_oauth).returns(oauth)
-        Aws::STS::Client.new.config.credentials
+        Aws::Google.new(config).credentials
       end
 
       it 'raises error on invalid AWS permissions' do
         Google::Auth.expects(:get_application_default).returns(nil)
         Aws::Google.any_instance.expects(:google_oauth).times(2).returns(oauth, nil)
         err = assert_raises(Aws::STS::Errors::AccessDenied) do
-          Aws::STS::Client.new.config.credentials
+          Aws::Google.new(config).credentials
         end
         _(err.message).must_match 'Your Google ID does not have access to the requested AWS Role.'
       end
@@ -176,7 +176,7 @@ describe Aws::Google do
           }
         )
         Aws::Google.any_instance.expects(:google_oauth).returns(oauth)
-        Aws::STS::Client.new.config.credentials
+        Aws::Google.new(config).credentials
         assert_requested(token_post)
       end
     end
@@ -196,7 +196,7 @@ describe Aws::Google do
         system.times(5)
         @oauth_default.once
         Aws::Google.any_instance.expects(:google_oauth).returns(oauth).once
-        Aws::STS::Client.new.config.credentials
+        Aws::Google.new(config).credentials
       end
     end
   end

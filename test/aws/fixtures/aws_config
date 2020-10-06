@@ -1,6 +1,6 @@
 [profile default]
 region = us-east-1
-[profile cdo-expired]
+[profile cdo-expired_session]
 expiration = 0
-[profile cdo-saved]
+[profile cdo-saved_session]
 expiration = 3485728777
