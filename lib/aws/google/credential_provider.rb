@@ -24,9 +24,11 @@ module Aws
       def google_credentials_from_config(opts = {})
         p = opts[:profile] || @profile_name
         if @config_enabled && @parsed_config
-          entry = @parsed_config.fetch(p, {})
-          if (google_opts = entry['google'])
-            Google.new(google_opts.transform_keys(&:to_sym))
+          google_opts = @parsed_config.
+            fetch(p, {}).fetch('google', {}).
+            transform_keys(&:to_sym)
+          if google_opts.merge(::Aws::Google.config).has_key?(:role_arn)
+            Google.new(google_opts)
           end
         end
       end

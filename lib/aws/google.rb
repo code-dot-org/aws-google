@@ -27,8 +27,10 @@ module Aws
     include ::Aws::Google::CachedCredentials
 
     class << self
+      # Use `Aws::Google.config` to set default options for any instance of this provider.
       attr_accessor :config
     end
+    self.config = {}
 
     # @option options [required, String] :role_arn
     # @option options [String] :policy
@@ -43,6 +45,7 @@ module Aws
     # @option options [String] :client_id Google client ID
     # @option options [String] :client_secret Google client secret
     def initialize(options = {})
+      options = options.merge(self.class.config)
       @oauth_attempted = false
       @assume_role_params = options.slice(
         *Aws::STS::Client.api.operation(:assume_role_with_web_identity).

@@ -23,10 +23,6 @@ describe Aws::Google do
   end
 
   describe 'not configured' do
-    before do
-      Aws::Google.stubs(:config).returns(nil)
-    end
-
     it 'does nothing' do
       Aws::Google.expects(:new).never
       Aws::STS::Client.new
@@ -64,7 +60,6 @@ describe Aws::Google do
     let(:system) { @system }
 
     before do
-      Aws::Google.stubs(:config).returns(config)
       config[:client].stub_responses(
         :assume_role_with_web_identity,
         credentials: credentials
@@ -128,6 +123,16 @@ describe Aws::Google do
       config[:profile] = 'cdo-saved'
       Aws::Google.any_instance.expects(:refresh).never
       Aws::Google.new(config).credentials
+    end
+    
+    it 'uses config defaults for new AWS clients' do
+      Aws::Google.stubs(:config).returns(config)
+      @oauth_default.once
+      system.times(5)
+      c = Aws::STS::Client.new.config.credentials
+      _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
+      _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
+      _(c.credentials.session_token).must_equal credentials[:session_token]
     end
 
     describe 'valid Google auth, no AWS permissions' do
