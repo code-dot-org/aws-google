@@ -48,21 +48,23 @@ your Google Client ID (`accounts.google.com:aud`) and a specific set of Google A
 }
 ```
 
-- In your Ruby code, construct an `Aws::Google` object by passing in the AWS role, client id and client secret:
+- In your Ruby code, construct an `Aws::Google` object by passing the AWS `role_arn`, Google `client_id` and `client_secret`, either as constructor arguments or via the `Aws::Google.config` global defaults:
 ```ruby
 require 'aws/google'
 
-aws_role = 'arn:aws:iam::[AccountID]:role/[Role]'
-client_id = '123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com'
-client_secret = '01234567890abcdefghijklmn'
+options = {
+  aws_role: 'arn:aws:iam::[AccountID]:role/[Role]',
+  client_id: '123456789012-abcdefghijklmnopqrstuvwzyz0123456.apps.googleusercontent.com',
+  client_secret: '01234567890abcdefghijklmn'
+}
 
-role_credentials = Aws::Google.new(
-  role_arn: aws_role,
-  google_client_id: client_id,
-  google_client_secret: client_secret
-)
+# Pass constructor arguments:
+credentials = Aws::Google.new(options)
+puts Aws::STS::Client.new(credentials: credentials).get_caller_identity
 
-puts Aws::STS::Client.new(credentials: role_credentials).get_caller_identity
+# Set global defaults:
+Aws::Google.config = options
+puts Aws::STS::Client.new.get_caller_identity
 ```
 
 - Or, add the properties to your AWS config profile ([`~/.aws/config`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where)) to use Google as the AWS credential provider without any changes to your application code:
