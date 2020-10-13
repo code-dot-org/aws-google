@@ -204,5 +204,27 @@ describe Aws::Google do
         Aws::Google.new(config).credentials
       end
     end
+    
+    describe 'no shared config' do
+      before do
+        Aws.shared_config.fresh(
+          config_enabled: true,
+          credentials_path: nil,
+          config_path: nil
+        )
+      end
+
+      it 'creates client credentials from Google config' do
+        Aws::Google.stubs(:config).returns(config)
+
+        @oauth_default.once
+        system.times(5)
+
+        c = Aws::STS::Client.new(region: 'us-east-1').config.credentials
+        _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
+        _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
+        _(c.credentials.session_token).must_equal credentials[:session_token]
+      end
+    end
   end
 end

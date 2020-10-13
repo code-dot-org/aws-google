@@ -22,14 +22,17 @@ module Aws
 
     module GoogleSharedCredentials
       def google_credentials_from_config(opts = {})
-        p = opts[:profile] || @profile_name
+        google_opts = {}
         if @config_enabled && @parsed_config
-          google_opts = @parsed_config.
+          p = opts[:profile] || @profile_name
+          google_opts.merge!(@parsed_config.
             fetch(p, {}).fetch('google', {}).
             transform_keys(&:to_sym)
-          if google_opts.merge(::Aws::Google.config).has_key?(:role_arn)
-            Google.new(google_opts)
-          end
+          )
+        end
+        google_opts.merge!(::Aws::Google.config)
+        if google_opts.has_key?(:role_arn)
+          Google.new(google_opts)
         end
       end
     end
