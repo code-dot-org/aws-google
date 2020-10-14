@@ -20,8 +20,11 @@ Or install it yourself as:
 
 ## Usage
 
-- Visit the [Google API Console](https://console.developers.google.com/) to create/obtain OAuth 2.0 Client ID credentials (client ID and client secret) for an application in your Google account.
-- Create an AWS IAM Role with the desired IAM policies attached, and a ['trust policy'](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#term_trust-policy) ([`AssumeRolePolicyDocument`](https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html)) allowing the [`sts:AssumeRoleWithWebIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html) action with [Web Identity Federation condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html#condition-keys-wif) authorizing
+### Create a Google Client ID
+Visit the [Google API Console](https://console.developers.google.com/) to create/obtain [OAuth 2.0 Client ID credentials](https://support.google.com/cloud/answer/6158849) (client ID and client secret) for an application in your Google account.
+
+### Create an AWS IAM Role
+Create an AWS IAM Role with the desired IAM policies attached, and a ['trust policy'](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#term_trust-policy) ([`AssumeRolePolicyDocument`](https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html)) allowing the [`sts:AssumeRoleWithWebIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html) action with [Web Identity Federation condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html#condition-keys-wif) authorizing
 your Google Client ID (`accounts.google.com:aud`) and a specific set of Google Account IDs (`accounts.google.com:sub`):
 
 ```json
@@ -48,7 +51,8 @@ your Google Client ID (`accounts.google.com:aud`) and a specific set of Google A
 }
 ```
 
-- In your Ruby code, construct an `Aws::Google` object by passing the AWS `role_arn`, Google `client_id` and `client_secret`, either as constructor arguments or via the `Aws::Google.config` global defaults:
+### Method 1: `Aws::Google`
+In your Ruby code, construct an `Aws::Google` object by passing the AWS `role_arn`, Google `client_id` and `client_secret`, either as constructor arguments or via the `Aws::Google.config` global defaults:
 ```ruby
 require 'aws/google'
 
@@ -67,6 +71,7 @@ Aws::Google.config = options
 puts Aws::STS::Client.new.get_caller_identity
 ```
 
+### Method 2: AWS Shared Config
 - Or, add the properties to your AWS config profile ([`~/.aws/config`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where)) to use Google as the AWS credential provider without any changes to your application code:
 
 ```ini
@@ -78,7 +83,7 @@ google =
 credential_process = aws-google
 ```
 
-The extra `credential_process` config line tells AWS to [Source Credentials with an External Process](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html), in this case the `aws-google` script, which allows you to seamlessly use the same Google login configuration from non-Ruby SDKs (like the CLI).
+The extra `credential_process` config line tells AWS to [Source Credentials with an External Process](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html), in this case the `aws-google` executable script installed by this gem, which allows you to seamlessly use the same Google login configuration from non-Ruby SDKs (like the CLI).
 
 ## Development
 
