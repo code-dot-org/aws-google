@@ -23,9 +23,9 @@ module Aws
       end
 
       def refresh_if_near_expiration
-        if near_expiration?
+        if near_expiration?(SYNC_EXPIRATION_LENGTH)
           @mutex.synchronize do
-            if near_expiration?
+            if near_expiration?(SYNC_EXPIRATION_LENGTH)
               refresh
               write_credentials
             end
