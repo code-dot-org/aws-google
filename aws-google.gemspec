@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'aws-sdk-core', '~> 3.130'
-  spec.add_dependency 'google-api-client', '~> 0.23'
+  spec.add_dependency 'google-apis-core'
   spec.add_dependency 'launchy', '~> 2'
 
   spec.add_development_dependency 'activesupport', '~> 5'

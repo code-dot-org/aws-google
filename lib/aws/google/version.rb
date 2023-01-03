@@ -1,5 +1,5 @@
 module Aws
   class Google
-    VERSION = '0.1.8'.freeze
+    VERSION = '0.2.0'.freeze
   end
 end
