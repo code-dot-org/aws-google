@@ -41,7 +41,7 @@ module Aws
     # @option options [String] :online if `true` only a temporary access token will be provided,
     #                 a long-lived refresh token will not be created and stored on the filesystem.
     # @option options [String] :port port for local server to listen on to capture oauth browser redirect.
-    #                 Defaults to 1234. Set to nil or 0 to use an out-of-band authentication process.
+    #                 Defaults to 1234.
     # @option options [String] :client_id Google client ID
     # @option options [String] :client_secret Google client secret
     def initialize(options = {})
@@ -98,18 +98,7 @@ module Aws
       credentials.tap(&storage.method(:write_credentials))
     end
 
-    def silence_output
-      outs = [$stdout, $stderr]
-      clones = outs.map(&:clone)
-      outs.each { |io| io.reopen '/dev/null'}
-      yield
-    ensure
-      outs.each_with_index { |io, i| io.reopen(clones[i]) }
-    end
-
     def get_oauth_code(client, options)
-      raise 'fallback' unless @port && !@port.zero?
-
       require 'launchy'
       require 'webrick'
       code = nil
@@ -120,35 +109,27 @@ module Aws
       )
       server.mount_proc '/' do |req, res|
         code = req.query['code']
-        res.status = 202
-        res.body = 'Login successful, you may close this browser window.'
+        if code
+          res.status = 202
+          res.body = 'Login successful, you may close this browser window.'
+        else
+          res.status = 500
+          res.body = "Authentication failed. Received a request to http://localhost:#{@port} that should complete Google OAuth flow, but no code was received."
+        end
         server.stop
       end
-      trap('INT') { server.shutdown }
+
       client.redirect_uri = "http://localhost:#{@port}"
-      silence_output do
-        launchy = Launchy.open(client.authorization_uri(options).to_s)
-        server_thread = Thread.new do
-          begin
-            server.start
-          ensure server.shutdown
-          end
-        end
-        while server_thread.alive?
-          raise 'fallback' if !launchy.alive? && !launchy.value.success?
-
-          sleep 0.1
-        end
+      Launchy.open(client.authorization_uri(options).to_s) do |exception|
+        puts "Couldn't open browser, please authenticate with Google using this link:"
+        puts client.authorization_uri(options).to_s
+        puts
+        puts "Note: link must be opened on this computer, as Google will redirect to #{client.redirect_uri} to complete authentication."
       end
-      code || raise('fallback')
-    rescue StandardError
-      trap('INT', 'DEFAULT')
-      # Fallback to out-of-band authentication if browser launch failed.
-      client.redirect_uri = 'oob'
-      return ENV['OAUTH_CODE'] if ENV['OAUTH_CODE']
 
-      raise RuntimeError, 'Open the following URL in a browser to get a code,' \
-             "export to $OAUTH_CODE and rerun:\n#{client.authorization_uri(options)}", []
+      server.start
+
+      code or raise 'Failed to get OAuth code from Google'
     end
 
     def refresh
