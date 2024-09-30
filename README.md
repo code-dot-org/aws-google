@@ -24,8 +24,13 @@ Or install it yourself as:
 Visit the [Google API Console](https://console.developers.google.com/) to create/obtain [OAuth 2.0 Client ID credentials](https://support.google.com/cloud/answer/6158849) (client ID and client secret) for an application in your Google account.
 
 ### Create an AWS IAM Role
-Create an AWS IAM Role with the desired IAM policies attached, and a ['trust policy'](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#term_trust-policy) ([`AssumeRolePolicyDocument`](https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html)) allowing the [`sts:AssumeRoleWithWebIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html) action with [Web Identity Federation condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html#condition-keys-wif) authorizing
+Create an AWS IAM Role with the desired IAM policies attached, and a ['trust policy'][1] ([`AssumeRolePolicyDocument`][2]) allowing the [`sts:AssumeRoleWithWebIdentity`][3] action with [Web Identity Federation condition keys][4] authorizing
 your Google Client ID (`accounts.google.com:aud`) and a specific set of Google Account IDs (`accounts.google.com:sub`):
+
+[1]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#term_trust-policy "IAM Trust Policy"
+[2]: https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html "Create Role API"
+[3]: https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html "Assume Role With Identity API"
+[4]: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html#condition-keys-wif "IAM Condition Keys"
 
 ```json
 {
@@ -53,6 +58,7 @@ your Google Client ID (`accounts.google.com:aud`) and a specific set of Google A
 
 ### Method 1: `Aws::Google`
 In your Ruby code, construct an `Aws::Google` object by passing the AWS `role_arn`, Google `client_id` and `client_secret`, either as constructor arguments or via the `Aws::Google.config` global defaults:
+
 ```ruby
 require 'aws/google'
 

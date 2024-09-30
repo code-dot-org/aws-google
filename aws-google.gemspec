@@ -1,8 +1,9 @@
-lib = File.expand_path('../lib', __FILE__)
+lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'aws/google/version'
 
 Gem::Specification.new do |spec|
+  spec.required_ruby_version = '>= 3.0.5'
   spec.name          = 'aws-google'
   spec.version       = Aws::Google::VERSION
   spec.authors       = ['Will Jordan']
@@ -21,14 +22,14 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'aws-sdk-core', '~> 3.130'
+  spec.add_dependency 'aws-sdk-core', '~> 3.201'
   spec.add_dependency 'google-apis-core'
   spec.add_dependency 'launchy', '~> 2'
 
-  spec.add_development_dependency 'activesupport', '~> 5'
-  spec.add_development_dependency 'minitest', '~> 5.14.2'
-  spec.add_development_dependency 'mocha', '~> 1.5'
-  spec.add_development_dependency 'rake', '~> 12'
+  spec.add_development_dependency 'activesupport', '~> 6.1.7.8'
+  spec.add_development_dependency 'minitest', '~> 5.25.1'
+  spec.add_development_dependency 'mocha', '~> 2.4'
+  spec.add_development_dependency 'rake', '~> 13'
   spec.add_development_dependency 'timecop', '~> 0.8'
-  spec.add_development_dependency 'webmock', '~> 3.3'
+  spec.add_development_dependency 'webmock', '~> 3'
 end
