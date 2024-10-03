@@ -1,0 +1,44 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - darin/update-aws-sdk
+
+jobs:
+  # Test on code-dot-org Ruby version
+  test_3_0_5:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0.5
+          bundler-cache: true
+
+      - name: Run tests
+        run: rake test
+
+  # Test on latest Ruby
+  test_3_3:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
+          bundler-cache: true
+
+      - name: Run tests
+        run: rake test
