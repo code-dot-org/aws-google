@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - darin/update-aws-sdk
 
 jobs:
   # Test on code-dot-org Ruby version
@@ -47,4 +44,4 @@ jobs:
         run: bundle install
 
       - name: Run tests
-        run: rake test
+        run: bundle install rake test
