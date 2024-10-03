@@ -27,7 +27,7 @@ jobs:
         run: bundle install
 
       - name: Run tests
-        run: rake test
+        run: bundle exec rake test
 
   # Test on latest Ruby
   # test_3_3:
