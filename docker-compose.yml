@@ -1,7 +1,7 @@
 version: '3'
 services:
   ruby:
-    image: ruby:3.0.5
+    build: .
     volumes:
       - .:/app
     working_dir: /app

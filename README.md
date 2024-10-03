@@ -97,9 +97,10 @@ Prerequisites:
 
 * Ruby 3.0.5
 
-You can have Ruby installed locally, or use Docker and mount this repository into a Ruby container. By using Docker you can avoid conflicts with differing Ruby versions or other installed gems. To run and 'bash' into a Ruby container, install Docker and run the following. See [docker-compose.yml](docker-compose.yml) for details, or to experiment with different Ruby versions.
+You can have Ruby installed locally, or use Docker and mount this repository into a Ruby container. By using Docker you can avoid conflicts with differing Ruby versions or other installed gems. To run and 'bash' into a Ruby container, install Docker and run the following. See [docker-compose.yml](docker-compose.yml) for details.
 
 ```
+docker compose build
 docker compose run ruby
 ```
 
