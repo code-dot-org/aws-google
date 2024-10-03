@@ -1,8 +1,8 @@
 version: '3'
 services:
   ruby:
-    build: .
+    image: ruby:3.0.5
     volumes:
-      - .:/app   # Map the current directory to /app inside the container
-    stdin_open: true
-    tty: true
+      - .:/app
+    working_dir: /app
+    command: bash

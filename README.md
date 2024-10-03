@@ -93,9 +93,21 @@ The extra `credential_process` config line tells AWS to [Source Credentials with
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Prerequisites:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+* Ruby 3.0.5
+
+You can have Ruby installed locally, or use Docker and mount this repository into a Ruby container. By using Docker you can avoid conflicts with differing Ruby versions or other installed gems. To run and 'bash' into a Ruby container, install Docker and run the following. See [docker-compose.yml](docker-compose.yml) for details, or to experiment with different Ruby versions.
+
+```
+docker compose run ruby
+```
+
+With either option, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+
+To install this gem onto your local machine, run `bundle exec rake install`.
+
+To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
 ## Contributing
 
