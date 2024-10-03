@@ -6,5 +6,3 @@ services:
       - .:/app   # Map the current directory to /app inside the container
     stdin_open: true
     tty: true
-    ports:
-      - "3000:3000"  # If you're using a server (e.g., for testing with Rails), map the port

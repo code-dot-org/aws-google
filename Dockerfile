@@ -1,5 +1,5 @@
 # Base image for Ruby (you can specify a version)
-FROM ruby:3.9.1
+FROM ruby:3.0.5
 
 # Install any system dependencies (adjust based on your gem's needs)
 RUN apt-get update -qq && apt-get install -y build-essential libpq-dev nodejs
