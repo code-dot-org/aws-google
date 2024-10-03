@@ -72,7 +72,7 @@ describe Aws::Google do
 
     it 'creates credentials from a Google auth token' do
       @oauth_default.once
-      system.times(4)
+      system.times(5)
 
       c = Aws::Google.new(config).credentials
       _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
@@ -88,7 +88,7 @@ describe Aws::Google do
        .then.returns(JWT.encode({ email: 'email' }, ''))
       Google::Auth.stubs(:get_application_default).returns(m)
 
-      system.times(4)
+      system.times(5)
 
       c = Aws::Google.new(config).credentials
       _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
@@ -108,6 +108,7 @@ describe Aws::Google do
       expiration = provider.expiration
       _(expiration).must_equal(provider.expiration)
       Timecop.travel(1.5.hours.from_now) do
+        # This test is failing. I don't see where we'd be triggering a refresh, and some debugging sugguests the refresh logic is never called.
         _(expiration).wont_equal(provider.expiration)
       end
     end
@@ -115,7 +116,7 @@ describe Aws::Google do
     it 'refreshes saved expired credentials' do
       config[:profile] = 'cdo-expired'
       @oauth_default.once
-      system.times(4)
+      system.times(5)
       Aws::Google.new(config).credentials
     end
 
@@ -128,7 +129,7 @@ describe Aws::Google do
     it 'uses config defaults for new AWS clients' do
       Aws::Google.stubs(:config).returns(config)
       @oauth_default.once
-      system.times(4)
+      system.times(5)
       c = Aws::STS::Client.new.config.credentials
       _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
       _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
@@ -147,7 +148,7 @@ describe Aws::Google do
       end
 
       it 'retries Google auth when invalid credentials are provided' do
-        system.times(4)
+        system.times(5)
         @oauth_default.once
         Aws::Google.any_instance.expects(:google_oauth).returns(oauth)
         Aws::Google.new(config).credentials
@@ -198,7 +199,7 @@ describe Aws::Google do
       end
 
       it 'refreshes Google auth token when expired' do
-        system.times(4)
+        system.times(5)
         @oauth_default.once
         Aws::Google.any_instance.expects(:google_oauth).returns(oauth).once
         Aws::Google.new(config).credentials
@@ -218,7 +219,7 @@ describe Aws::Google do
         Aws::Google.stubs(:config).returns(config)
 
         @oauth_default.once
-        system.times(4)
+        system.times(5)
 
         c = Aws::STS::Client.new(region: 'us-east-1').config.credentials
         _(c.credentials.access_key_id).must_equal credentials[:access_key_id]

@@ -17,18 +17,26 @@ module Aws
 
         @profile = options[:profile] || ENV['AWS_PROFILE'] || ENV['AWS_DEFAULT_PROFILE'] || 'default'
         @session_profile = @profile + '_session'
-        @expiration = Aws.shared_config.expiration(profile: @session_profile) rescue nil
-        @credentials = Aws.shared_config.credentials(profile: @session_profile) rescue nil
+        @expiration = begin
+          Aws.shared_config.expiration(profile: @session_profile)
+        rescue StandardError
+          nil
+        end
+        @credentials = begin
+          Aws.shared_config.credentials(profile: @session_profile)
+        rescue StandardError
+          nil
+        end
         refresh_if_near_expiration
       end
 
       def refresh_if_near_expiration
-        if near_expiration?(SYNC_EXPIRATION_LENGTH)
-          @mutex.synchronize do
-            if near_expiration?(SYNC_EXPIRATION_LENGTH)
-              refresh
-              write_credentials
-            end
+        return unless near_expiration?(SYNC_EXPIRATION_LENGTH)
+
+        @mutex.synchronize do
+          if near_expiration?(SYNC_EXPIRATION_LENGTH)
+            refresh
+            write_credentials
           end
         end
       end
@@ -42,7 +50,8 @@ module Aws
         credentials_map = {
           'aws_access_key_id' => @credentials.access_key_id,
           'aws_secret_access_key' => @credentials.secret_access_key,
-          'aws_session_token' => @credentials.session_token
+          'aws_session_token' => @credentials.session_token,
+          'expiration' => @expiration
         }
 
         # Use the AWS CLI to set the credentials in the session profile
