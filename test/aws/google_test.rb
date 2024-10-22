@@ -97,7 +97,6 @@ describe Aws::Google do
     end
 
     it 'refreshes expired credentials' do
-      skip 'This test appears to have been failing for a long time. See comment in test.'
       config[:client].stub_responses(
         :assume_role_with_web_identity,
         [
@@ -109,7 +108,7 @@ describe Aws::Google do
       expiration = provider.expiration
       _(expiration).must_equal(provider.expiration)
       Timecop.travel(1.5.hours.from_now) do
-        # This test is failing. I don't see where we'd be triggering a refresh, and some debugging sugguests the refresh logic is never called.
+        provider.refresh!
         _(expiration).wont_equal(provider.expiration)
       end
     end

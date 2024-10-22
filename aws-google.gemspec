@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'aws-sdk-core', '~> 3.209.1'
+  spec.add_dependency 'aws-sdk-core', '~> 3.211.0'
   spec.add_dependency 'google-apis-core', '~> 0.15.1'
   spec.add_dependency 'launchy', '~> 3.0.1'
 
