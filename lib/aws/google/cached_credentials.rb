@@ -23,22 +23,31 @@ module Aws
       end
 
       def refresh_if_near_expiration
-        if near_expiration?(SYNC_EXPIRATION_LENGTH)
-          @mutex.synchronize do
-            if near_expiration?(SYNC_EXPIRATION_LENGTH)
-              refresh
-              write_credentials
-            end
+        return unless near_expiration?(SYNC_EXPIRATION_LENGTH)
+
+        @mutex.synchronize do
+          if near_expiration?(SYNC_EXPIRATION_LENGTH)
+            refresh
+            write_credentials
           end
         end
       end
 
       # Write credentials and expiration to AWS credentials file.
       def write_credentials
-        # AWS CLI is needed because writing AWS credentials is not supported by the AWS Ruby SDK.
+        # Ensure the AWS CLI is available before attempting to write credentials.
         return unless system('which aws >/dev/null 2>&1')
-        Aws::SharedCredentials::KEY_MAP.transform_values(&@credentials.method(:send)).
-          merge(expiration: @expiration).each do |key, value|
+
+        # Manually map the credentials to the keys used by AWS CLI
+        credentials_map = {
+          'aws_access_key_id' => @credentials.access_key_id,
+          'aws_secret_access_key' => @credentials.secret_access_key,
+          'aws_session_token' => @credentials.session_token,
+          'expiration' => @expiration
+        }
+
+        # Use the AWS CLI to set the credentials in the session profile
+        credentials_map.each do |key, value|
           system("aws configure set #{key} #{value} --profile #{@session_profile}")
         end
       end

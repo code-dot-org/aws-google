@@ -83,9 +83,9 @@ describe Aws::Google do
     it 'refreshes expired Google auth token credentials' do
       m = mock
       m.stubs(:refresh!)
-      m.stubs(:id_token).
-        returns(JWT.encode({ email: 'email', exp: Time.now.to_i - 1 }, '')).
-        then.returns(JWT.encode({ email: 'email' }, ''))
+      m.stubs(:id_token)
+       .returns(JWT.encode({ email: 'email', exp: Time.now.to_i - 1 }, ''))
+       .then.returns(JWT.encode({ email: 'email' }, ''))
       Google::Auth.stubs(:get_application_default).returns(m)
 
       system.times(5)
@@ -108,6 +108,7 @@ describe Aws::Google do
       expiration = provider.expiration
       _(expiration).must_equal(provider.expiration)
       Timecop.travel(1.5.hours.from_now) do
+        provider.refresh!
         _(expiration).wont_equal(provider.expiration)
       end
     end
@@ -124,7 +125,7 @@ describe Aws::Google do
       Aws::Google.any_instance.expects(:refresh).never
       Aws::Google.new(config).credentials
     end
-    
+
     it 'uses config defaults for new AWS clients' do
       Aws::Google.stubs(:config).returns(config)
       @oauth_default.once
@@ -204,7 +205,7 @@ describe Aws::Google do
         Aws::Google.new(config).credentials
       end
     end
-    
+
     describe 'no shared config' do
       before do
         Aws.shared_config.fresh(
