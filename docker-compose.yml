@@ -1,0 +1,7 @@
+services:
+  ruby:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: bash
