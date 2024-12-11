@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'aws-sdk-core', '~> 3.211.0'
-  spec.add_dependency 'google-apis-core', '~> 0.15.1'
+  spec.add_dependency 'google-apis-core', '~> 0.11.3' # Newest version compatible with code-dot-org's google_drive>googleauth dependency
   spec.add_dependency 'launchy', '~> 3.0.1'
 
   spec.add_development_dependency 'activesupport', '~> 6.1.7.8'
