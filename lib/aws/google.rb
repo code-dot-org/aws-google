@@ -112,20 +112,24 @@ module Aws
 
       require 'launchy'
       require 'webrick'
+
       code = nil
       server = WEBrick::HTTPServer.new(
         Port: @port,
         Logger: WEBrick::Log.new(STDOUT, 0),
         AccessLog: []
       )
+
       server.mount_proc '/' do |req, res|
         code = req.query['code']
         res.status = 202
         res.body = 'Login successful, you may close this browser window.'
-        server.stop
+        server.shutdown
       end
+
       trap('INT') { server.shutdown }
       client.redirect_uri = "http://localhost:#{@port}"
+
       silence_output do
         launchy = Launchy.open(client.authorization_uri(options).to_s)
         server_thread = Thread.new do
@@ -134,15 +138,10 @@ module Aws
           ensure server.shutdown
           end
         end
-        while server_thread.alive?
-          unless launchy.alive? && launchy.value.success?
-            server.shutdown
-            raise RuntimeError.new('Failed to launch browser with Launchy')
-          end
-
-          sleep 0.1
-        end
+        
+        server_thread.join
       end
+
       code || raise('Local Google Oauth failed to get code')
     ensure
       trap('INT', 'DEFAULT')
