@@ -19,18 +19,14 @@ module Aws
         @session_profile = @profile + '_session'
         @expiration = Aws.shared_config.expiration(profile: @session_profile) rescue nil
         @credentials = Aws.shared_config.credentials(profile: @session_profile) rescue nil
-        refresh_if_near_expiration
+        # Auto-refresh disabled due to deprecation
+        # refresh_if_near_expiration
       end
 
       def refresh_if_near_expiration
-        return unless near_expiration?(SYNC_EXPIRATION_LENGTH)
-
-        @mutex.synchronize do
-          if near_expiration?(SYNC_EXPIRATION_LENGTH)
-            refresh
-            write_credentials
-          end
-        end
+        # Deprecation: auto-refresh is disabled; sessions will expire normally.
+        warn "\e[31m*** DEPRECATION NOTICE: aws-google auto-refresh disabled. Sessions expire without refresh. ***\e[0m"
+        # no-op
       end
 
       # Write credentials and expiration to AWS credentials file.
