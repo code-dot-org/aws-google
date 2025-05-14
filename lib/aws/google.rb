@@ -108,24 +108,28 @@ module Aws
     end
 
     def get_oauth_code(client, options)
-      raise 'fallback' unless @port && !@port.zero?
+      raise ArgumentError.new('Missing port for local oauth server') unless @port && !@port.zero?
 
       require 'launchy'
       require 'webrick'
+
       code = nil
       server = WEBrick::HTTPServer.new(
         Port: @port,
         Logger: WEBrick::Log.new(STDOUT, 0),
         AccessLog: []
       )
+
       server.mount_proc '/' do |req, res|
         code = req.query['code']
         res.status = 202
         res.body = 'Login successful, you may close this browser window.'
-        server.stop
+        server.shutdown
       end
+
       trap('INT') { server.shutdown }
       client.redirect_uri = "http://localhost:#{@port}"
+
       silence_output do
         launchy = Launchy.open(client.authorization_uri(options).to_s)
         server_thread = Thread.new do
@@ -134,21 +138,13 @@ module Aws
           ensure server.shutdown
           end
         end
-        while server_thread.alive?
-          raise 'fallback' if !launchy.alive? && !launchy.value.success?
-
-          sleep 0.1
-        end
+        
+        server_thread.join
       end
-      code || raise('fallback')
-    rescue StandardError
-      trap('INT', 'DEFAULT')
-      # Fallback to out-of-band authentication if browser launch failed.
-      client.redirect_uri = 'oob'
-      return ENV['OAUTH_CODE'] if ENV['OAUTH_CODE']
 
-      raise RuntimeError, 'Open the following URL in a browser to get a code,' \
-             "export to $OAUTH_CODE and rerun:\n#{client.authorization_uri(options)}", []
+      code || raise('Local Google Oauth failed to get code')
+    ensure
+      trap('INT', 'DEFAULT')
     end
 
     def refresh
