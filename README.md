@@ -1,5 +1,45 @@
 # Aws::Google [![Build Status](https://travis-ci.com/code-dot-org/aws-google.svg?branch=master)](https://travis-ci.com/code-dot-org/aws-google)
 
+## Security Advisory - DEPRECATION NOTICE
+
+**What’s Actually Happening**
+- The `aws-google` gem uses your Google Workspace SAML federation and refresh token (stored under `~/.config/gcloud`) to silently reauthenticate and fetch new SAML assertions indefinitely.
+- Access tokens are short-lived, but the gem auto-refreshes them without user interaction, effectively granting perpetual AWS CLI access.
+
+**Root Problem: IAM Trust + Refresh = Forever Access**
+- Trust policy allows any valid Google SAML assertion to assume the role.
+- A long-lived Google refresh token means AWS sessions can be recreated endlessly, bypassing STS session limits.
+
+**Why This Feels Like a Hacker’s Backdoor**
+- Chains refreshable identity tokens to bypass short-lived credentials.
+- Skirts MFA: only checked on Google login, which could be months ago.
+- Operates silently: no AWS logs for reauthentication calls.
+- Becomes a persistent, long-lived IAM user, against AWS security best practices.
+
+---
+
+## Path Forward & Deprecation Plan
+
+1. **Deprecate `aws-google`.**
+   - Introduce a warning on every invocation and in the README.
+   - Disable auto-refresh so sessions expire normally.
+2. **Migrate to AWS IAM Identity Center (SSO).**
+   - Still federates from Google Workspace.
+   - Centralized user provisioning, role mapping, and enforced session duration (1–12 hr).
+   - CLI users run `aws sso login` instead of relying on a refresh token.
+3. **Remove the Google SAML Provider in IAM.**
+   - Delete the `arn:aws:iam::<acct>:saml-provider/Google` trust and any `WebIdentity` entries for `accounts.google.com`.
+   - Forces immediate revocation for any existing refresh tokens.
+4. **Audit Usage.**
+   - Use CloudTrail to query `AssumeRoleWithSAML` events.
+   - Identify any lingering federation patterns or anomalous long-lived access.
+
+---
+
+Use this gem at your own risk until you have completed the above migration steps.
+
+# **DEPRECATION NOTICE:** The `aws-google` gem is deprecated and will no longer auto-refresh credentials. Please migrate to AWS IAM Identity Center or other solutions and expect this gem to stop functioning in future releases.
+
 Use Google OAuth as an AWS Credential Provider.
 
 ## Installation
