@@ -95,7 +95,7 @@ The extra `credential_process` config line tells AWS to [Source Credentials with
 
 Prerequisites:
 
-* Ruby 3.0.5
+* Ruby 3.1.7
 
 You can have Ruby installed locally, or use Docker and mount this repository into a Ruby container. By using Docker you can avoid conflicts with differing Ruby versions or other installed gems. To run and 'bash' into a Ruby container, install Docker and run the following. See [docker-compose.yml](docker-compose.yml) for details.
 
