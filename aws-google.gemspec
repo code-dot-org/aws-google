@@ -3,7 +3,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'aws/google/version'
 
 Gem::Specification.new do |spec|
-  spec.required_ruby_version = '>= 3.0.5'
+  spec.required_ruby_version = '~> 3.0'
   spec.name          = 'aws-google'
   spec.version       = Aws::Google::VERSION
   spec.authors       = ['Will Jordan']
