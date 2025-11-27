@@ -45,8 +45,11 @@ module Aws
     # @option options [String] :client_id Google client ID
     # @option options [String] :client_secret Google client secret
     def initialize(options = {})
+      # Deprecation warning and disable auto-refresh
+      warn "\e[31m*** DEPRECATION NOTICE: The aws-google gem is deprecated and will no longer auto-refresh credentials. Please migrate to AWS IAM Identity Center. ***\e[0m"
       options = options.merge(self.class.config)
       @oauth_attempted = false
+      @online = options.fetch(:online, true)
       @assume_role_params = options.slice(
         *Aws::STS::Client.api.operation(:assume_role_with_web_identity).
           input.shape.member_names
@@ -58,7 +61,6 @@ module Aws
       )
       @client = options[:client] || Aws::STS::Client.new(credentials: nil)
       @domain = options[:domain]
-      @online = options[:online]
       @port = options[:port] || 1234
       super
     end

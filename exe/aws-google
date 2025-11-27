@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+warn "\e[31m*** DEPRECATION NOTICE: The aws-google CLI is deprecated and will no longer auto-refresh credentials. Migrate to AWS IAM Identity Center. ***\e[0m"
 
 # CLI to retrieve AWS credentials in credential_process format.
 # Ref: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
