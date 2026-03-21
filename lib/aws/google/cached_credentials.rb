@@ -28,7 +28,7 @@ module Aws
         @mutex.synchronize do
           if near_expiration?(SYNC_EXPIRATION_LENGTH)
             refresh
-            write_credentials
+            with_write_lock { write_credentials }
           end
         end
       end
@@ -50,6 +50,39 @@ module Aws
         credentials_map.each do |key, value|
           system("aws configure set #{key} #{value} --profile #{@session_profile}")
         end
+      end
+
+      private
+
+      def now_monotonic
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+
+      # Lock file ~/.aws/aws-google.lock to prevent multiple simultaneous calls from
+      # different processes from corrupting ~/.aws/config and ~/.aws/credentials
+      def with_write_lock
+        lock_path = aws_google_lock_path
+        start_time = now_monotonic
+
+        # Open aws-google.lock for read/write
+        File.open(lock_path, File::RDWR | File::CREAT) do |lock|
+          # Keep trying to exclusively file lock it every 0.1s until we succeed
+          until lock.flock(File::LOCK_EX | File::LOCK_NB)
+            raise "Timed out after 60s waiting for: #{lock_path}" if now_monotonic - start_time >= 60
+            sleep 0.1
+          end
+
+          yield
+        end
+      end
+
+      def aws_google_lock_path
+        dot_aws_dir = File.dirname(
+          Aws.shared_config.config_path ||
+          Aws.shared_config.credentials_path ||
+          File.expand_path('~/.aws/config')
+        )
+        File.join(dot_aws_dir, 'aws-google.lock')
       end
     end
   end

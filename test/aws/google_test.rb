@@ -22,6 +22,11 @@ describe Aws::Google do
     ENV.stubs(:[]).returns(nil)
   end
 
+  after do
+    lock_path = File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.lock'))
+    File.delete(lock_path) if File.exist?(lock_path)
+  end
+
   describe 'not configured' do
     it 'does nothing' do
       Aws::Google.expects(:new).never
@@ -134,6 +139,50 @@ describe Aws::Google do
       _(c.credentials.access_key_id).must_equal credentials[:access_key_id]
       _(c.credentials.secret_access_key).must_equal credentials[:secret_access_key]
       _(c.credentials.session_token).must_equal credentials[:session_token]
+    end
+
+    describe 'write lock' do
+      let :provider do
+        Aws::Google.allocate.tap do |google|
+          google.instance_variable_set(:@credentials, Aws::Credentials.new('x', 'y', 'z'))
+          google.instance_variable_set(:@expiration, 123)
+          google.instance_variable_set(:@session_profile, 'cdo_session')
+        end
+      end
+
+      let(:lock_path) { File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.lock')) }
+      let(:lock) { mock }
+
+      it 'writes credentials while holding the lock' do
+        File.expects(:open).with(lock_path, File::RDWR | File::CREAT).yields(lock)
+        lock.expects(:flock).with(File::LOCK_EX | File::LOCK_NB).returns(true)
+        system.times(5)
+
+        provider.send(:with_write_lock) { provider.send(:write_credentials) }
+      end
+
+      it 'retries until the lock is available' do
+        File.expects(:open).with(lock_path, File::RDWR | File::CREAT).yields(lock)
+        lock.expects(:flock).with(File::LOCK_EX | File::LOCK_NB).times(3).returns(false, false, true)
+        Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0, 10, 20)
+        provider.expects(:sleep).with(0.1).twice
+        system.times(5)
+
+        provider.send(:with_write_lock) { provider.send(:write_credentials) }
+      end
+
+      it 'raises when the lock times out' do
+        File.expects(:open).with(lock_path, File::RDWR | File::CREAT).yields(lock)
+        lock.expects(:flock).with(File::LOCK_EX | File::LOCK_NB).returns(false)
+        Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0, 60)
+        provider.expects(:system).never
+
+        err = assert_raises(RuntimeError) do
+          provider.send(:with_write_lock) { provider.send(:write_credentials) }
+        end
+
+        _(err.message).must_equal "Timed out after 60s waiting for: #{lock_path}"
+      end
     end
 
     describe 'valid Google auth, no AWS permissions' do
