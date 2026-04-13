@@ -28,7 +28,7 @@ module Aws
         @mutex.synchronize do
           if near_expiration?(SYNC_EXPIRATION_LENGTH)
             refresh
-            write_credentials
+            with_write_lock { write_credentials }
           end
         end
       end
@@ -50,6 +50,50 @@ module Aws
         credentials_map.each do |key, value|
           system("aws configure set #{key} #{value} --profile #{@session_profile}")
         end
+      end
+
+      private
+
+      def now_monotonic
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+
+      # Lock file ~/.aws/aws-google.mutex to prevent multiple simultaneous calls from
+      # different processes from corrupting ~/.aws/config and ~/.aws/credentials
+      def with_write_lock(try_again: true, &block)
+        lock_path = aws_google_lock_path
+        start_time = now_monotonic
+
+        # jitter timeout so when we break the lock, if we started with 10 other parallel processes
+        # there's much higher chance that somebody re-creates a new lock distinctly first, and we all
+        # continue about our merry way, vs "aws-google suddenly no works w/o reboot". Messy but pragmatic.
+        timeout = rand(45.0..60.0)
+
+        # Open aws-google.mutex for read/write
+        File.open(lock_path, File::RDWR | File::CREAT) do |lock|
+          # Keep trying to exclusively file lock it every 0.1s until we succeed
+          until lock.flock(File::LOCK_EX | File::LOCK_NB)
+            if now_monotonic - start_time >= timeout
+              # Crap, this shouldn't happen with a kernel lock, but it seems somebody is holding it for >45s?
+              raise "aws-google is wedged, try deleting #{lock_path}." unless try_again
+              warn "WARNING: timed out after #{timeout}s waiting for: #{lock_path}, breaking lock and trying again"
+              File.unlink(lock_path)
+              return with_write_lock(try_again: false, &block)
+            end
+            sleep 0.1
+          end
+
+          block.call
+        end
+      end
+
+      def aws_google_lock_path
+        dot_aws_dir = File.dirname(
+          Aws.shared_config.config_path ||
+          Aws.shared_config.credentials_path ||
+          File.expand_path('~/.aws/config')
+        )
+        File.join(dot_aws_dir, 'aws-google.mutex')
       end
     end
   end
