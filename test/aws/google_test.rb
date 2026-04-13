@@ -23,7 +23,7 @@ describe Aws::Google do
   end
 
   after do
-    lock_path = File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.lock'))
+    lock_path = File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.mutex'))
     File.delete(lock_path) if File.exist?(lock_path)
   end
 
@@ -150,7 +150,7 @@ describe Aws::Google do
         end
       end
 
-      let(:lock_path) { File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.lock')) }
+      let(:lock_path) { File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.mutex')) }
       let(:lock) { mock }
 
       it 'writes credentials while holding the lock' do

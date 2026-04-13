@@ -58,13 +58,13 @@ module Aws
         Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
 
-      # Lock file ~/.aws/aws-google.lock to prevent multiple simultaneous calls from
+      # Lock file ~/.aws/aws-google.mutex to prevent multiple simultaneous calls from
       # different processes from corrupting ~/.aws/config and ~/.aws/credentials
       def with_write_lock
         lock_path = aws_google_lock_path
         start_time = now_monotonic
 
-        # Open aws-google.lock for read/write
+        # Open aws-google.mutex for read/write
         File.open(lock_path, File::RDWR | File::CREAT) do |lock|
           # Keep trying to exclusively file lock it every 0.1s until we succeed
           until lock.flock(File::LOCK_EX | File::LOCK_NB)
@@ -82,7 +82,7 @@ module Aws
           Aws.shared_config.credentials_path ||
           File.expand_path('~/.aws/config')
         )
-        File.join(dot_aws_dir, 'aws-google.lock')
+        File.join(dot_aws_dir, 'aws-google.mutex')
       end
     end
   end
