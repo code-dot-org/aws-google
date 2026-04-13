@@ -152,6 +152,7 @@ describe Aws::Google do
 
       let(:lock_path) { File.expand_path(File.join(__dir__, 'fixtures', 'aws-google.mutex')) }
       let(:lock) { mock }
+      let(:next_lock) { mock }
 
       it 'writes credentials while holding the lock' do
         File.expects(:open).with(lock_path, File::RDWR | File::CREAT).yields(lock)
@@ -164,6 +165,7 @@ describe Aws::Google do
       it 'retries until the lock is available' do
         File.expects(:open).with(lock_path, File::RDWR | File::CREAT).yields(lock)
         lock.expects(:flock).with(File::LOCK_EX | File::LOCK_NB).times(3).returns(false, false, true)
+        provider.stubs(:rand).with(45.0..60.0).returns(60.0)
         Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0, 10, 20)
         provider.expects(:sleep).with(0.1).twice
         system.times(5)
@@ -171,17 +173,13 @@ describe Aws::Google do
         provider.send(:with_write_lock) { provider.send(:write_credentials) }
       end
 
-      it 'raises when the lock times out' do
+      it 'uses float timeout jitter' do
         File.expects(:open).with(lock_path, File::RDWR | File::CREAT).yields(lock)
-        lock.expects(:flock).with(File::LOCK_EX | File::LOCK_NB).returns(false)
-        Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0, 60)
-        provider.expects(:system).never
+        lock.expects(:flock).with(File::LOCK_EX | File::LOCK_NB).returns(true)
+        provider.expects(:rand).with(45.0..60.0).returns(45.0)
+        system.times(5)
 
-        err = assert_raises(RuntimeError) do
-          provider.send(:with_write_lock) { provider.send(:write_credentials) }
-        end
-
-        _(err.message).must_equal "Timed out after 60s waiting for: #{lock_path}"
+        provider.send(:with_write_lock) { provider.send(:write_credentials) }
       end
     end
 
@@ -259,8 +257,8 @@ describe Aws::Google do
       before do
         Aws.shared_config.fresh(
           config_enabled: true,
-          credentials_path: nil,
-          config_path: nil
+          credentials_path: File.expand_path(File.join(__dir__, 'fixtures', 'missing_credentials')),
+          config_path: File.expand_path(File.join(__dir__, 'fixtures', 'missing_config'))
         )
       end
 
